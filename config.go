@@ -24,6 +24,9 @@ const (
 
 	// WithQueryInterface generate code with exported interface object
 	WithQueryInterface
+
+	// WithGeneric generate code with generic
+	WithGeneric
 )
 
 // Config generator's basic configuration
@@ -34,15 +37,20 @@ type Config struct {
 	OutFile      string // query code file name, default: gen.go
 	ModelPkgPath string // generated model code's package name
 	WithUnitTest bool   // generate unit test for query code
+	Incremental  bool   // skip writing unchanged generated files (based on manifest hash)
+	MergeQuery   bool   // keep previously generated query entries (A+B) when generating subsets
 
 	// generate model global configuration
-	FieldNullable     bool // generate pointer when field is nullable
-	FieldCoverable    bool // generate pointer when field has default value, to fix problem zero value cannot be assign: https://gorm.io/docs/create.html#Default-Values
-	FieldSignable     bool // detect integer field's unsigned type, adjust generated data type
-	FieldWithIndexTag bool // generate with gorm index tag
-	FieldWithTypeTag  bool // generate with gorm column type tag
+	FieldNullable       bool // generate pointer when field is nullable
+	FieldCoverable      bool // generate pointer when field has default value, to fix problem zero value cannot be assign: https://gorm.io/docs/create.html#Default-Values
+	FieldSignable       bool // detect integer field's unsigned type, adjust generated data type
+	FieldWithIndexTag   bool // generate with gorm index tag
+	FieldWithTypeTag    bool // generate with gorm column type tag
+	FieldWithDefaultTag bool
 
 	Mode GenerateMode // generate mode
+
+	UnitTestTemplate string
 
 	queryPkgName   string // generated query code's package name
 	modelPkgPath   string // model pkg path in target project
@@ -113,6 +121,29 @@ func (cfg *Config) WithImportPkgPath(paths ...string) {
 		paths[i] = path
 	}
 	cfg.importPkgPaths = append(cfg.importPkgPaths, paths...)
+}
+
+// WithDataTypesNullType configures the types of fields to use their datatypes nullable counterparts.
+/**
+ *
+ * @param {boolean} all - If true, all basic types of fields will be replaced with their `datatypes.Null[T]` types.
+ *                        If false, only fields that are allowed to be null will be replaced with `datatypes.Null[T]` types.
+ *
+ * Examples:
+ *
+ * When `all` is true:
+ * - `int64` will be replaced with `datatypes.NullInt64`
+ * - `string` will be replaced with `datatypes.NullString`
+ *
+ * When `all` is false:
+ * - Only fields that can be null (e.g., `*string` or `*int`) will be replaced with `datatypes.Null[T]` types.
+ *
+ * Note:
+ * Ensure that proper error handling is implemented when converting
+ * fields to their `datatypes.Null[T]` types to avoid runtime issues.
+ */
+func (cfg *Config) WithDataTypesNullType(all bool) {
+	cfg.WithOpts(WithDataTypesNullType(all))
 }
 
 // Revise format path and db
